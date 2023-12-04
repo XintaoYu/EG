@@ -78,7 +78,6 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
     rw [← sub_todir_eq_todir_div]
     exact congrArg AngValue.toDir (ang.value.sub_half_eq_half).symm
   same_sgn := by
-    have h : ang.source = ang.AngBis.source := rfl
     have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by sorry
     rcases g with g₁|g₂|g₃|g₄
     · left
@@ -97,7 +96,7 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
       left
       constructor
       · apply toreal_eq_half_pi_of_eq_half_pi_toangvalue
-        simp [toreal_eq_half_pi_of_eq_half_pi_toangvalue,mk_start_ray_value_eq_half_angvalue, g₃]
+        simp [mk_start_ray_value_eq_half_angvalue, g₃]
       · exact g₃
     · right
       right
@@ -119,14 +118,15 @@ theorem angbis_iff_angbis {ang : Angle P} {r : Ray P} : IsAngBis ang r ↔ r = a
 
 theorem ang_source_rev_eq_source_bis {ang : Angle P} {r : Ray P} (h : IsAngBis ang r) : ang.reverse.source = r.source := by rw[ang.ang_source_rev_eq_source, h.eq_source]
 
-theorem nonpi_bisector_eq_bisector_of_rev {ang : Angle P} {r : Ray P} (h : IsAngBis ang r) (nonpi : ang.value ≠ π ): IsAngBis ang.reverse r where
+--if a ray is the bisector of an angle whose value is not π , then it is also the bisector of the reverse angle.
+theorem nonpi_eq_rev_angbis_of_angbis {ang : Angle P} {r : Ray P} (h : IsAngBis ang r) (nonpi : ang.value ≠ π ): IsAngBis ang.reverse r where
   eq_source := by rw[h.eq_source.symm, ang.ang_source_rev_eq_source]
   eq_value := by
     have : (Angle.mk_start_ray ang.reverse r (ang_source_rev_eq_source_bis h)) = (Angle.mk_ray_end ang r h.eq_source).reverse := rfl
     rw [this, (Angle.mk_ray_end ang r h.eq_source).ang_value_rev_eq_neg_value]
     have : (Angle.mk_ray_end ang.reverse r (ang_source_rev_eq_source_bis h)) = (Angle.mk_start_ray ang r h.eq_source).reverse := rfl
     rw [this, (Angle.mk_start_ray ang r h.eq_source).ang_value_rev_eq_neg_value]
-    simp [h.eq_value]
+    simp only[h.eq_value]
   same_sgn := by
     have : (Angle.mk_start_ray ang.reverse r (ang_source_rev_eq_source_bis h)) = (Angle.mk_ray_end ang r h.eq_source).reverse := rfl
     rw [this, (Angle.mk_ray_end ang r h.eq_source).ang_value_rev_eq_neg_value]
@@ -140,9 +140,65 @@ theorem nonpi_bisector_eq_bisector_of_rev {ang : Angle P} {r : Ray P} (h : IsAng
       exact h₃.2
     · exact Or.inr (Or.inr (Or.inr h₄))
 
+--if an angle does not values π, its reverse angle shares the same bisector.
+theorem nonpi_angbis_eq_rev_angbis {ang : Angle P} (nonpi : ang.value ≠ π ): ang.AngBis = ang.reverse.AngBis := by
+  apply angbis_iff_angbis.mp
+  · simp[nonpi_eq_rev_angbis_of_angbis, angbis_is_angbis, nonpi]
 
-theorem bisector_eq_bisector_of_rev' {ang : Angle P} : ang.AngBis = ang.reverse.AngBis := by
-  sorry
+
+--two lemma for theorem rev_angbis_of_pi_ang
+theorem pi_ang_angbis_mk_ray_end_is_half_pi {ang : Angle P} (pi : ang.value = π ) : (Angle.mk_ray_end ang ang.AngBis eq_source).value = (2⁻¹ * π).toAngValue := by
+  have : IsAngBis ang ang.AngBis := angbis_is_angbis
+  apply toreal_eq_half_pi_of_eq_half_pi_toangvalue
+  · field_simp
+    simp[pi, ← this.eq_value, mk_start_ray_value_eq_half_angvalue]
+    ring
+
+theorem pi_ang_rev_angbis_rev_mk_start_ray_is_half_pi {ang : Angle P} (pi : ang.value = π ) : (Angle.mk_start_ray ang.reverse ang.AngBis.reverse ang_source_rev_eq_source).value  = (2⁻¹ * π).toAngValue := by
+  have : IsAngBis ang ang.AngBis := angbis_is_angbis
+  let ang1 := Angle.mk_ray_end ang ang.AngBis eq_source
+  let ang2 := Angle.mk_start_ray ang.reverse ang.AngBis.reverse ang_source_rev_eq_source
+  calc
+        ang2.value = π - ang1.value := by
+          have h : ang1.value + ang2.value = π := by
+            apply (reverse_ray_iff_sum_of_angle_eq_pi _).mp
+            · have : ang2 = (Angle.mk ang.end_ray ang.AngBis.reverse _):= rfl
+              rw [this, Ray.rev_rev_eq_self]
+              rfl
+            · rfl
+          simp[← h]
+        _ = (2⁻¹ * π).toAngValue := by
+            simp[pi_ang_angbis_mk_ray_end_is_half_pi pi]
+            ring
+
+--if an angle values π, the bisector of its reverse angle is the reverse ray of its bisector
+theorem angrev_rev_angbis_of_pi_ang {ang : Angle P}(pi : ang.value = π ) : IsAngBis ang.reverse ang.AngBis.reverse where
+  eq_source := ang_source_rev_eq_source
+  eq_value := by
+    have : IsAngBis ang ang.AngBis := angbis_is_angbis
+    let ang1 := Angle.mk_ray_end ang.reverse ang.AngBis.reverse ang_source_rev_eq_source
+    let ang2 := Angle.mk_start_ray ang ang.AngBis eq_source
+    have h : ang1.value =  (2⁻¹ * π).toAngValue := by
+      calc
+        ang1.value = π - ang2.value := by
+          have g : ang1.value + ang2.value = π := by
+            apply (reverse_ray_iff_sum_of_angle_eq_pi _ ).mp
+            · rfl
+            · rfl
+          simp[← g]
+        _ = π - (2⁻¹ * π).toAngValue := by simp[this.eq_value, pi_ang_angbis_mk_ray_end_is_half_pi, pi]
+        _ = (2⁻¹ * π).toAngValue := by
+          norm_num
+          ring
+    simp only[pi_ang_rev_angbis_rev_mk_start_ray_is_half_pi pi,h]
+  same_sgn := Or.inr (Or.inr (Or.inl ( ⟨ pi_ang_rev_angbis_rev_mk_start_ray_is_half_pi pi, pi_ang_rev_is_pi pi⟩ )))
+
+--if a ray is the bisector of an angle whose value is π , then its reverse ray is the bisector of the reverse angle.
+theorem rev_angbis_of_bis_pi_ang {ang : Angle P} {r : Ray P} (h : IsAngBis ang r) (pi : ang.value = π ): IsAngBis ang.reverse r.reverse := by simp only[angbis_iff_angbis.mp h,angrev_rev_angbis_of_pi_ang pi]
+
+
+
+
 
 theorem angbisline_is_angbisline : sorry := sorry
 
