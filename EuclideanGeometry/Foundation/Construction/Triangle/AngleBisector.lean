@@ -79,7 +79,9 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
     exact congrArg AngValue.toDir (ang.value.sub_half_eq_half).symm
   same_sgn := by
     have h : ang.source = ang.AngBis.source := rfl
-    have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by sorry
+    have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by
+      -- convert not_isnd_or_ispos_or_isneg
+      sorry
     rcases g with g₁|g₂|g₃|g₄
     · left
       simp [g₁]
@@ -123,7 +125,19 @@ theorem angbis_iff_angbis {ang : Angle P} {r : Ray P} : IsAngBis ang r ↔ r = a
       apply eq_mul_of_div_eq
       apply dir_eq_of_angvalue_eq.mpr
       rw [← Dir.AngDiff, ← mk_start_ray_value_eq_angdiff h.eq_source]
-      sorry
+      rcases h.same_sgn with h' | h' | h' | h'
+      · sorry
+      · sorry
+      · rw [h'.1, h'.2]
+        simp
+      · rw [h'.1, h'.2]
+        simp
+        nth_rw 1 [← AngValue.toreal_toangvalue_eq_self (θ := 0)]
+        apply toAngValue_eq_iff.mpr
+        use 0
+        field_simp
+        ring_nf
+        norm_num
     apply Ray.ext _ _ eq_source eq_todir
   · exact fun h ↦ (by rw [h]; apply angbis_is_angbis)
 
