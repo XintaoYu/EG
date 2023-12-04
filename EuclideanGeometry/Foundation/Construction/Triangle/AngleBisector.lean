@@ -113,7 +113,18 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
 
 theorem angbis_iff_angbis {ang : Angle P} {r : Ray P} : IsAngBis ang r ↔ r = ang.AngBis := by
   constructor
-  · sorry
+  · intro h
+    have eq_source : r.source = ang.AngBis.source := by
+      rw [← h.eq_source]
+      apply eq_source
+    have eq_todir : r.toDir = ang.AngBis.toDir := by
+      unfold AngBis
+      rw [mul_comm]
+      apply eq_mul_of_div_eq
+      apply dir_eq_of_angvalue_eq.mpr
+      rw [← Dir.AngDiff, ← mk_start_ray_value_eq_angdiff h.eq_source]
+      sorry
+    apply Ray.ext _ _ eq_source eq_todir
   · exact fun h ↦ (by rw [h]; apply angbis_is_angbis)
 
 
