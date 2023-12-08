@@ -80,8 +80,27 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
   same_sgn := by
     have h : ang.source = ang.AngBis.source := rfl
     have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by
-      -- convert not_isnd_or_ispos_or_isneg
-      sorry
+      convert AngValue.not_isnd_or_ispos_or_isneg (θ := ang.value) using 0
+      constructor
+      · intro h'
+        rcases h' with h₁ | h₂ | h₃
+        · right; left;
+          exact h₁
+        · right; right;
+          exact h₂
+        · left
+          rcases h₃ with h₀ | h₀
+          · exact fun x ↦ x.2 h₀
+          · exact fun x ↦ x.1 h₀
+      · intro h'
+        rcases h' with h₁ | h₂ | h₃
+        · right; right;
+          contrapose! h₁
+          exact ⟨h₁.2, h₁.1⟩
+        · left
+          exact h₂
+        · right; left;
+          exact h₃
     rcases g with g₁|g₂|g₃|g₄
     · left
       simp [g₁]
