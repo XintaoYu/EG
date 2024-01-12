@@ -79,7 +79,28 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
     exact congrArg AngValue.toDir (ang.value.sub_half_eq_half).symm
   same_sgn := by
     have h : ang.source = ang.AngBis.source := rfl
-    have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by sorry
+    have g : (ang.value.IsPos) ∨ (ang.value.IsNeg) ∨ (ang.value = π) ∨ (ang.value = 0) := by
+      convert AngValue.not_isnd_or_ispos_or_isneg (θ := ang.value) using 0
+      constructor
+      · intro h'
+        rcases h' with h₁ | h₂ | h₃
+        · right; left;
+          exact h₁
+        · right; right;
+          exact h₂
+        · left
+          rcases h₃ with h₀ | h₀
+          · exact fun x ↦ x.2 h₀
+          · exact fun x ↦ x.1 h₀
+      · intro h'
+        rcases h' with h₁ | h₂ | h₃
+        · right; right;
+          contrapose! h₁
+          exact ⟨h₁.2, h₁.1⟩
+        · left
+          exact h₂
+        · right; left;
+          exact h₃
     rcases g with g₁|g₂|g₃|g₄
     · left
       simp [g₁]
@@ -113,7 +134,93 @@ theorem angbis_is_angbis {ang : Angle P} : IsAngBis ang ang.AngBis where
 
 theorem angbis_iff_angbis {ang : Angle P} {r : Ray P} : IsAngBis ang r ↔ r = ang.AngBis := by
   constructor
-  · sorry
+  · intro h
+    have eq_source : r.source = ang.AngBis.source := by
+      rw [← h.eq_source]
+      apply eq_source
+    have eq_todir : r.toDir = ang.AngBis.toDir := by
+      unfold AngBis
+      rw [mul_comm]
+      apply eq_mul_of_div_eq
+      apply dir_eq_of_angvalue_eq.mpr
+      rw [← Dir.AngDiff, ← mk_start_ray_value_eq_angdiff h.eq_source]
+      rcases or_assoc.mpr h.same_sgn with h' | h' | h'
+      · simp
+        have h₁ : value (mk_start_ray ang r h.eq_source) + value (mk_ray_end ang r h.eq_source) = ang.value := by
+          rw [mk_start_ray_value_eq_angdiff, mk_ray_end_value_eq_angdiff, Dir.AngDiff, Dir.AngDiff, ← mul_toangvalue_eq_toangvalue_add]
+          apply dir_eq_of_angvalue_eq.mp
+          simp; rfl
+        convert h₁ using 0
+        rw [← h.eq_value]
+        rw [← AngValue.toreal_toangvalue_eq_self (θ := value (mk_start_ray ang r h.eq_source)), AngValue.add_coe, ← two_mul]
+        nth_rw 2 [← AngValue.toreal_toangvalue_eq_self (θ := value ang)]
+        constructor
+        · intro h₂
+          rcases toAngValue_eq_iff.mp h₂ with ⟨k, h₃⟩
+          apply toAngValue_eq_iff.mpr
+          use 2 * k
+          norm_num
+          rw [← one_mul (value ang).toReal, ← mul_inv_cancel (a := 2) (by norm_num), mul_assoc, ← mul_sub, mul_assoc]
+          exact congrArg (HMul.hMul 2) h₃
+        · intro h₂
+          rcases toAngValue_eq_iff.mp h₂ with ⟨k, h₃⟩
+          have : k = 0 := by
+            have aux₁ : -2 * π < 2 * (value (mk_start_ray ang r h.eq_source)).toReal - (value ang).toReal ∧ 2 * (value (mk_start_ray ang r h.eq_source)).toReal - (value ang).toReal < 2 * π := by
+              have pi_pos : 0 < π := by positivity
+              rcases h' with hp | hn
+              · constructor
+                · have : -2 * π < -π := by linarith [pi_pos]
+                  apply lt_trans this
+                  convert add_lt_add (mul_pos (a := 2) (by norm_num) (AngValue.ispos_iff.mp hp.1).1) (mul_lt_mul_of_neg_left (c := -1) (AngValue.ispos_iff.mp hp.2).2 (by norm_num)) using 1
+                  simp
+                  ring
+                · convert add_lt_add ((mul_lt_mul_left (a := 2) (by norm_num)).mpr (AngValue.ispos_iff.mp hp.1).2) (mul_neg_of_neg_of_pos (a := -1) (by norm_num) (AngValue.ispos_iff.mp hp.2).1) using 1
+                  ring
+                  simp
+              · constructor
+                · convert add_lt_add ((mul_lt_mul_left (a := 2) (by norm_num)).mpr (AngValue.neg_pi_lt_toreal (θ := value (mk_start_ray ang r h.eq_source)))) (mul_pos_of_neg_of_neg (a := -1) (by norm_num) (AngValue.isneg_iff.mp hn.2)) using 1
+                  simp
+                  ring
+                · have : π < 2 * π := by linarith [pi_pos]
+                  apply lt_trans _ this
+                  convert add_lt_add (mul_neg_of_pos_of_neg (a := 2) (by norm_num) (AngValue.isneg_iff.mp hn.1)) (mul_lt_mul_of_neg_left (c := -1) (AngValue.neg_pi_lt_toreal (θ := value ang)) (by norm_num)) using 1
+                  ring
+                  simp
+            by_contra kne
+            have aux₂ : 2 * (value (mk_start_ray ang r h.eq_source)).toReal - (value ang).toReal ≤ -2 * π ∨ 2 * π ≤ 2 * (value (mk_start_ray ang r h.eq_source)).toReal - (value ang).toReal := by
+              rcases lt_trichotomy k 0 with klt | keq | kgt
+              · left
+                rw [h₃, neg_mul, neg_eq_neg_one_mul]
+                apply (mul_le_mul_right (by positivity)).mpr
+                exact Int.cast_le_neg_one_of_neg klt
+              · exfalso
+                exact kne keq
+              · right
+                rw [h₃]
+                nth_rw 1 [← one_mul (2 * π)]
+                apply (mul_le_mul_right (by positivity)).mpr
+                exact Int.cast_one_le_of_pos kgt
+            absurd aux₂
+            rw [not_or, not_le, not_le]
+            exact aux₁
+          rw [this] at h₃
+          simp at h₃
+          rw [← one_mul (value ang).toReal, ← mul_inv_cancel (a := 2) (by norm_num), mul_assoc, ← mul_sub] at h₃
+          apply toAngValue_eq_iff.mpr
+          use 0
+          simp
+          linarith
+      · rw [h'.1, h'.2]
+        simp
+      · rw [h'.1, h'.2]
+        simp
+        nth_rw 1 [← AngValue.toreal_toangvalue_eq_self (θ := 0)]
+        apply toAngValue_eq_iff.mpr
+        use 0
+        field_simp
+        ring_nf
+        norm_num
+    apply Ray.ext _ _ eq_source eq_todir
   · exact fun h ↦ (by rw [h]; apply angbis_is_angbis)
 
 
